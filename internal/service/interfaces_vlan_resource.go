@@ -90,9 +90,11 @@ func (r *InterfacesVlanResource) Create(ctx context.Context, req resource.Create
 
 func (r *InterfacesVlanResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data *InterfacesVlanResourceModel
+	var importing bool
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("importing"), &importing)...)
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -126,7 +128,7 @@ func (r *InterfacesVlanResource) Read(ctx context.Context, req resource.ReadRequ
 
 	// Handle empty device attribute (i.e. let OPNsense generate a device name)
 	// If the VLAN was created with device == "", then we ignore any changes to device.
-	if data.Device.ValueString() == "" {
+	if !importing && data.Device.ValueString() == "" {
 		vlanModel.Device = types.StringValue("")
 	}
 
@@ -185,4 +187,5 @@ func (r *InterfacesVlanResource) Delete(ctx context.Context, req resource.Delete
 
 func (r *InterfacesVlanResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("importing"), true)...)    
 }
